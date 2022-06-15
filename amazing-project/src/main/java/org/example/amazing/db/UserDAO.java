@@ -18,6 +18,21 @@ public class UserDAO {
         dataSource.setServerName("amazingDB");
     }
 
+    public boolean storeUser(UserDTO userDto) throws SQLException {
+        String query = "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?);";
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setString(1, userDto.getUsername());
+            preparedStatement.setString(2, userDto.getEmail());
+            preparedStatement.setString(3, userDto.getFirstName());
+            preparedStatement.setString(4, userDto.getLastName());
+            preparedStatement.setString(5, Arrays.toString(userDto.getHashedPassword()));
+            preparedStatement.setString(6, Arrays.toString(userDto.getSalt()));
+            int i = preparedStatement.executeUpdate();
+            return i > 0;
+        }
+    }
+
     public UserDTO fetchUserByUsername(String username) throws SQLException {
         String query = "SELECT * FROM Users WHERE username=?";
         try (Connection connection = dataSource.getConnection()) {
