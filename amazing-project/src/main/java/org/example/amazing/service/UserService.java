@@ -12,13 +12,15 @@ import java.sql.SQLException;
 import java.util.Arrays;
 
 public class UserService {
-    public static final MessageDigest passwordHasher;
+    public static final MessageDigest PASSWORD_HASHER;
+    private static final UserDAO USER_DAO;
     static {
         try {
-            passwordHasher = MessageDigest.getInstance("SHA-512");
+            PASSWORD_HASHER = MessageDigest.getInstance("SHA-512");
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
+        USER_DAO = new UserDAO();
     }
 
     public static boolean register(UserBean user, String suppliedPwd) {
@@ -31,22 +33,26 @@ public class UserService {
         userDto.setUsername(user.getUsername());
         userDto.setHashedPassword(hashedPassword);
         userDto.setSalt(salt);
-        UserDAO userDao = new UserDAO();
         try {
-            return userDao.storeUser(userDto);
+            return USER_DAO.storeUser(userDto);
         } catch (SQLException e) {
             return false;
         }
     }
 
-    public static boolean login(String suppliedPwd, byte[] userSalt, byte[] storedPasswordHash) {
-        byte[] hashedInputPass = hashPassword(suppliedPwd, userSalt);
-        return Arrays.equals(hashedInputPass, storedPasswordHash);
+    public static boolean login(String suppliedUser, String suppliedPwd) {
+        try {
+            UserDTO userDTO = USER_DAO.fetchUserByUsername(suppliedUser);
+            byte[] hashedInputPass = hashPassword(suppliedPwd, userDTO.getSalt());
+            return Arrays.equals(hashedInputPass, userDTO.getHashedPassword());
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static byte[] hashPassword(String pwd, byte[] salt) {
-        passwordHasher.update(salt);
-        return passwordHasher.digest(pwd.getBytes(StandardCharsets.UTF_8));
+        PASSWORD_HASHER.update(salt);
+        return PASSWORD_HASHER.digest(pwd.getBytes(StandardCharsets.UTF_8));
     }
 
     private static byte[] generateSalt() {
